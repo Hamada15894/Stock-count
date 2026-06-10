@@ -98,6 +98,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .seg button small{font-size:10px;color:var(--muted);font-weight:500}
 .seg button.on{border-color:var(--blue);background:var(--blue-soft);color:var(--blue)}
 .seg button.on small{color:var(--blue)}
+.seg.unit button.on{color:#fff;transform:scale(1.06);box-shadow:0 4px 14px rgba(0,30,98,.30);font-size:15px}
+.seg.unit button.on small{color:rgba(255,255,255,.85)}
+.seg.unit button{transition:all .18s ease}
 .seg.loc button.on{border-color:var(--navy);background:var(--navy);color:#fff}
 .seg.loc button.on small{color:rgba(255,255,255,.7)}
 .lbl{font-weight:700;font-size:13px;margin:15px 0 7px;color:var(--ink)}
@@ -167,7 +170,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <button class="btn btn-ghost" style="flex:1" onclick="openSettings()">⚙️ <span data-i="settings">الإعدادات</span></button>
       <button class="btn btn-navy" style="flex:.8" onclick="setLang(SET.lang==='ar'?'en':'ar')">🌐 <span id="langQuick"></span></button>
     </div>
-    <p class="muted" style="text-align:center;margin-top:22px">Mars Saudi Arabia — North Region · v1.0</p>
+    <p class="muted" style="text-align:center;margin-top:22px">Mars Saudi Arabia — North Region · <b id="vTag">v2.1</b></p>
   </div>
 </div>
 
@@ -225,7 +228,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="wrap" id="pane-scan" style="display:none">
     <div id="reader"></div>
     <div class="scan-hint">
-      <button class="btn btn-navy" id="scanBtn" style="width:100%;margin-top:14px" onclick="toggleScan()">📷 <span data-i="startScan">تشغيل الكاميرا</span></button>
+      <div class="row" style="margin-top:10px;gap:8px;justify-content:center">
+        <button class="btn btn-ghost" style="padding:9px 16px" onclick="scanTorch()">🔦</button>
+        <button class="btn btn-ghost" style="padding:9px 16px" id="zoomBtn" onclick="scanZoom()">1x</button>
+      </div>
+      <button class="btn btn-navy" id="scanBtn" style="width:100%;margin-top:10px" onclick="toggleScan()">📷 <span data-i="startScan">تشغيل الكاميرا</span></button>
       <p class="muted" style="margin-top:10px" data-i="scanHint">وجّه الكاميرا نحو باركود الكرتون أو الأوتر أو الحبة — سيتم التعرف على الصنف والوحدة تلقائيًا</p>
       <div id="lastScan"></div>
     </div>
@@ -246,7 +253,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <button class="icon-btn" onclick="go('scr-stores')">→</button>
     <h1 data-i="prevCounts2">الجردات السابقة</h1>
   </div></div>
-  <div class="wrap" id="histList"></div>
+  <div class="wrap">
+    <button class="btn btn-navy" style="width:100%;margin-bottom:12px" onclick="exportAllLocal()">⬇️ <span data-i="dlAllLocal">تحميل كل المتاجر في ملف Excel واحد</span></button>
+    <div id="histList"></div>
+  </div>
 </div>
 
 <!-- ============ ADMIN ============ -->
@@ -276,7 +286,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="conv-strip" id="esConv"></div>
 
   <div class="lbl" data-i="unit">الوحدة</div>
-  <div class="seg" id="esUnits"></div>
+  <div class="seg unit" id="esUnits"></div>
 
   <div class="lbl" data-i="qty">الكمية</div>
   <div class="qty-box">
@@ -407,8 +417,8 @@ const UNITS=[{k:'CS',ar:'كرتون',en:'Case'},{k:'SB',ar:'أوتر',en:'Outer'
 
 /* ================= i18n ================= */
 const I = {
- ar:{testConn:'اختبار الاتصال بالخادم',connOk:'الاتصال ناجح ✓ — الخادم يستجيب والإرسال سيعمل',connAuth:'الخادم يطلب تسجيل دخول — صلاحية الوصول ليست Anyone. الحل: افتح Apps Script ← Deploy ← Manage deployments ← ✏️ ← Who has access: Anyone ← Deploy. إن لم يوجد خيار Anyone (منع من إدارة الشركة) أنشئ النشر من حساب Gmail شخصي وأرسل الرابط الجديد',connFail:'الخادم رد بشكل غير متوقع — تأكد من الرابط أو أعد النشر',ocrAuto:'📅 تم التقاط التاريخ مع الباركود ✓',scanDate:'مسح التاريخ',willSave:'سيتم تسجيل',sar:'ر.س',totalVal:'إجمالي القيمة',setLink:'ضبط الرابط الآن',updPrice:'تحديث الأسعار',ocrLoad:'تحميل قارئ التواريخ…',ocrStart:'تشغيل الكاميرا…',ocrScan:'وجّه الإطار نحو التاريخ…',ocrFound:'تم العثور على تاريخ ✓',ocrExp:'انتهاء',ocrProd:'إنتاج',ocrOther:'تاريخ آخر',ocrApply:'اضغط للاعتماد',ocrSet:'تم تعبئة تاريخ الانتهاء ✓',noTorch:'الفلاش غير متاح على هذا الجهاز',ocrHint:'ضع سطر التاريخ داخل الإطار الأصفر — قرّب الكاميرا وثبّتها، واستخدم الفلاش 🔦 إذا كانت الطباعة باهتة',updData:'تحديث البيانات (الأصناف / الباركود / الشد / المتاجر)',pickFiles:'اختر ملفات Excel',resetData:'الأصلية',updHint:'ارفع نفس ملفات الإكسل المعتمدة (ملف الباركود، ملف الشد، ملف المتاجر) — يتعرف التطبيق على نوع كل ملف تلقائيًا ويحدّث قاعدته على هذا الجهاز.',updOk:'تم تحديث البيانات ✓',updNF:'لم يتم التعرف على الملفات — تأكد أنها نفس صيغة الملفات المعتمدة',updConv:'تحديث الشد',updAt:'آخر تحديث',heroSub:'جرد الأصناف في المتاجر — الشمال',adminPanel:'لوحة المدير',adminPanel2:'لوحة المدير',settings:'الإعدادات',settings2:'الإعدادات',pickStore:'اختر المتجر لبدء الجرد',searchStore:'ابحث عن متجر / مدينة / رقم...',prevCounts:'الجردات السابقة على هذا الجهاز',prevCounts2:'الجردات السابقة',tBrowse:'تصفح',tScan:'مسح باركود',tCart:'المجرود',searchProd:'ابحث بالاسم / ZREP / الباركود...',showDisc:'إظهار الأصناف الموقوفة',startScan:'تشغيل الكاميرا',stopScan:'إيقاف الكاميرا',scanHint:'وجّه الكاميرا نحو الباركود — يُقرأ الصنف والوحدة تلقائيًا، وإذا كان التاريخ مطبوعًا بجوار الباركود يُلتقط معه تلقائيًا. وإلا استخدم زر 📅 مسح التاريخ داخل شاشة الصنف',unit:'الوحدة',qty:'الكمية',loc:'الموقع',expiry:'تاريخ الانتهاء',save:'حفظ',save2:'حفظ الإعدادات',saveLine:'حفظ + سطر آخر',finishSend:'إنهاء الجرد وإرسال',sendTitle:'إنهاء الجرد وإرساله',sendSrv:'إرسال إلى المدير (الخادم)',dlExcel:'تحميل ملف Excel',waShare:'مشاركة ملخص واتساب',adminSub:'الجردات الواردة من الفريق',dlAll:'تحميل الكل في ملف Excel واحد',admEmpty:'اضغط ⟳ لجلب الجردات من الخادم',lang:'اللغة / Language',gasHint:'(رابط استقبال الجردات)',pinLbl:'رقم المدير السري (PIN)',hello:'أهلًا',drafts:'جردات غير مكتملة — اضغط للاستكمال',all:'الكل',items:'صنف',lines:'سطر',counted:'تم جرده',disc:'موقوف',noConv:'بدون شد',sent:'تم الإرسال',draft:'مسودة',resume:'استكمال',view:'عرض',del:'حذف',srvOk:'✅ تم الإرسال للمدير بنجاح',srvFail:'⚠️ تعذر الإرسال — تحقق من الإنترنت أو رابط الخادم، يمكنك تحميل الإكسل ومشاركته',noGas:'لم يتم ضبط رابط الخادم بعد — اطلب الرابط من المدير أو حمّل الإكسل وشاركه واتساب',pinAsk:'أدخل رقم المدير السري',wrongPin:'الرقم غير صحيح',saved:'تم الحفظ ✓',lineAdded:'تمت إضافة السطر ✓',needQty:'أدخل الكمية أولًا',scanNF:'باركود غير معروف: ',scanFound:'تم التعرف: ',exitWarn:'الجرد محفوظ تلقائيًا، يمكنك العودة له في أي وقت',emptyCart:'لم تجرد أي صنف بعد',confirmDel:'حذف هذا السطر؟',confirmDelSes:'حذف هذا الجرد نهائيًا؟',sendNote:'سيتم إرسال الجرد للمدير ويبقى محفوظًا على جهازك',camErr:'تعذر تشغيل الكاميرا — تأكد من السماح بالوصول للكاميرا وأن الرابط https',store:'متجر',total:'الإجمالي',more:'عرض المزيد ↓'},
- en:{testConn:'Test server connection',connOk:'Connected ✓ — server responds, sending will work',connAuth:'Server asks for Google login — access is not set to Anyone. Fix: Apps Script ← Deploy ← Manage deployments ← ✏️ ← Who has access: Anyone ← Deploy. If Anyone is missing (company policy), deploy from a personal Gmail and send the new link',connFail:'Unexpected server reply — check the link or redeploy',ocrAuto:'📅 Date captured with the barcode ✓',scanDate:'Scan date',willSave:'Will record',sar:'SAR',totalVal:'Total value',setLink:'Set up link now',updPrice:'prices updated',ocrLoad:'Loading date reader…',ocrStart:'Starting camera…',ocrScan:'Aim the frame at the date…',ocrFound:'Date found ✓',ocrExp:'Expiry',ocrProd:'Production',ocrOther:'Other date',ocrApply:'tap to apply',ocrSet:'Expiry date filled ✓',noTorch:'Torch not available on this device',ocrHint:'Put the date line inside the yellow frame — get close and hold steady, use the torch 🔦 for faint prints',updData:'Update data (items / barcodes / pack / stores)',pickFiles:'Choose Excel files',resetData:'Reset',updHint:'Upload the same approved Excel files (barcode file, pack file, stores file) — the app detects each file type automatically and updates its database on this device.',updOk:'Data updated ✓',updNF:'Files not recognized — make sure they match the approved formats',updConv:'pack data updated',updAt:'updated',heroSub:'In-store stock count — North Region',adminPanel:'Manager Panel',adminPanel2:'Manager Panel',settings:'Settings',settings2:'Settings',pickStore:'Pick a store to start counting',searchStore:'Search store / city / number...',prevCounts:'Previous counts on this device',prevCounts2:'Previous counts',tBrowse:'Browse',tScan:'Scan',tCart:'Counted',searchProd:'Search name / ZREP / barcode...',showDisc:'Show discontinued items',startScan:'Start camera',stopScan:'Stop camera',scanHint:'Point the camera at the barcode — item and unit are detected automatically, and if the date is printed next to the barcode it is captured too. Otherwise use the 📅 Scan date button inside the item screen',unit:'Unit',qty:'Quantity',loc:'Location',expiry:'Expiry date',save:'Save',save2:'Save settings',saveLine:'Save + new line',finishSend:'Finish & send',sendTitle:'Finish & send the count',sendSrv:'Send to manager (server)',dlExcel:'Download Excel',waShare:'Share WhatsApp summary',adminSub:'Counts received from the team',dlAll:'Download all in one Excel',admEmpty:'Tap ⟳ to fetch counts from server',lang:'اللغة / Language',gasHint:'(submissions endpoint)',pinLbl:'Manager PIN',hello:'Hello',drafts:'Unfinished counts — tap to resume',all:'All',items:'items',lines:'lines',counted:'Counted',disc:'Discontinued',noConv:'no pack data',sent:'Sent',draft:'Draft',resume:'Resume',view:'View',del:'Delete',srvOk:'✅ Sent to manager successfully',srvFail:'⚠️ Sending failed — check internet or server URL. You can download the Excel and share it',noGas:'Server URL not configured — ask the manager, or download Excel and share via WhatsApp',pinAsk:'Enter manager PIN',wrongPin:'Wrong PIN',saved:'Saved ✓',lineAdded:'Line added ✓',needQty:'Enter a quantity first',scanNF:'Unknown barcode: ',scanFound:'Found: ',exitWarn:'The count is auto-saved, you can come back anytime',emptyCart:'Nothing counted yet',confirmDel:'Delete this line?',confirmDelSes:'Delete this count permanently?',sendNote:'The count will be sent to the manager and stays saved on this device',camErr:'Camera failed — allow camera access and make sure the link is https',store:'store',total:'Total',more:'Show more ↓'}
+ ar:{noZoom:'الزوم غير متاح على هذا الجهاز',dlAllLocal:'تحميل كل المتاجر في ملف Excel واحد',gasBuiltIn:'الرابط مدمج في التطبيق — اتركه فارغًا',testConn:'اختبار الاتصال بالخادم',connOk:'الاتصال ناجح ✓ — الخادم يستجيب والإرسال سيعمل',connAuth:'الخادم يطلب تسجيل دخول — صلاحية الوصول ليست Anyone. الحل: افتح Apps Script ← Deploy ← Manage deployments ← ✏️ ← Who has access: Anyone ← Deploy. إن لم يوجد خيار Anyone (منع من إدارة الشركة) أنشئ النشر من حساب Gmail شخصي وأرسل الرابط الجديد',connFail:'الخادم رد بشكل غير متوقع — تأكد من الرابط أو أعد النشر',ocrAuto:'📅 تم التقاط التاريخ مع الباركود ✓',scanDate:'مسح التاريخ',willSave:'سيتم تسجيل',sar:'ر.س',totalVal:'إجمالي القيمة',setLink:'ضبط الرابط الآن',updPrice:'تحديث الأسعار',ocrLoad:'تحميل قارئ التواريخ…',ocrStart:'تشغيل الكاميرا…',ocrScan:'وجّه الإطار نحو التاريخ…',ocrFound:'تم العثور على تاريخ ✓',ocrExp:'انتهاء',ocrProd:'إنتاج',ocrOther:'تاريخ آخر',ocrApply:'اضغط للاعتماد',ocrSet:'تم تعبئة تاريخ الانتهاء ✓',noTorch:'الفلاش غير متاح على هذا الجهاز',ocrHint:'ضع سطر التاريخ داخل الإطار الأصفر — قرّب الكاميرا وثبّتها، واستخدم الفلاش 🔦 إذا كانت الطباعة باهتة',updData:'تحديث البيانات (الأصناف / الباركود / الشد / المتاجر)',pickFiles:'اختر ملفات Excel',resetData:'الأصلية',updHint:'ارفع نفس ملفات الإكسل المعتمدة (ملف الباركود، ملف الشد، ملف المتاجر) — يتعرف التطبيق على نوع كل ملف تلقائيًا ويحدّث قاعدته على هذا الجهاز.',updOk:'تم تحديث البيانات ✓',updNF:'لم يتم التعرف على الملفات — تأكد أنها نفس صيغة الملفات المعتمدة',updConv:'تحديث الشد',updAt:'آخر تحديث',heroSub:'جرد الأصناف في المتاجر — الشمال',adminPanel:'لوحة المدير',adminPanel2:'لوحة المدير',settings:'الإعدادات',settings2:'الإعدادات',pickStore:'اختر المتجر لبدء الجرد',searchStore:'ابحث عن متجر / مدينة / رقم...',prevCounts:'الجردات السابقة على هذا الجهاز',prevCounts2:'الجردات السابقة',tBrowse:'تصفح',tScan:'مسح باركود',tCart:'المجرود',searchProd:'ابحث بالاسم / ZREP / الباركود...',showDisc:'إظهار الأصناف الموقوفة',startScan:'تشغيل الكاميرا',stopScan:'إيقاف الكاميرا',scanHint:'وجّه الكاميرا نحو الباركود — يُقرأ الصنف والوحدة تلقائيًا، وإذا كان التاريخ مطبوعًا بجوار الباركود يُلتقط معه تلقائيًا. وإلا استخدم زر 📅 مسح التاريخ داخل شاشة الصنف',unit:'الوحدة',qty:'الكمية',loc:'الموقع',expiry:'تاريخ الانتهاء',save:'حفظ',save2:'حفظ الإعدادات',saveLine:'حفظ + سطر آخر',finishSend:'إنهاء الجرد وإرسال',sendTitle:'إنهاء الجرد وإرساله',sendSrv:'إرسال إلى المدير (الخادم)',dlExcel:'تحميل ملف Excel',waShare:'مشاركة ملخص واتساب',adminSub:'الجردات الواردة من الفريق',dlAll:'تحميل الكل في ملف Excel واحد',admEmpty:'اضغط ⟳ لجلب الجردات من الخادم',lang:'اللغة / Language',gasHint:'(رابط استقبال الجردات)',pinLbl:'رقم المدير السري (PIN)',hello:'أهلًا',drafts:'جردات غير مكتملة — اضغط للاستكمال',all:'الكل',items:'صنف',lines:'سطر',counted:'تم جرده',disc:'موقوف',noConv:'بدون شد',sent:'تم الإرسال',draft:'مسودة',resume:'استكمال',view:'عرض',del:'حذف',srvOk:'✅ تم الإرسال للمدير بنجاح',srvFail:'⚠️ تعذر الإرسال — تحقق من الإنترنت أو رابط الخادم، يمكنك تحميل الإكسل ومشاركته',noGas:'لم يتم ضبط رابط الخادم بعد — اطلب الرابط من المدير أو حمّل الإكسل وشاركه واتساب',pinAsk:'أدخل رقم المدير السري',wrongPin:'الرقم غير صحيح',saved:'تم الحفظ ✓',lineAdded:'تمت إضافة السطر ✓',needQty:'أدخل الكمية أولًا',scanNF:'باركود غير معروف: ',scanFound:'تم التعرف: ',exitWarn:'الجرد محفوظ تلقائيًا، يمكنك العودة له في أي وقت',emptyCart:'لم تجرد أي صنف بعد',confirmDel:'حذف هذا السطر؟',confirmDelSes:'حذف هذا الجرد نهائيًا؟',sendNote:'سيتم إرسال الجرد للمدير ويبقى محفوظًا على جهازك',camErr:'تعذر تشغيل الكاميرا — تأكد من السماح بالوصول للكاميرا وأن الرابط https',store:'متجر',total:'الإجمالي',more:'عرض المزيد ↓'},
+ en:{noZoom:'Zoom not available on this device',dlAllLocal:'Download all stores in one Excel',gasBuiltIn:'Link is built into the app — leave empty',testConn:'Test server connection',connOk:'Connected ✓ — server responds, sending will work',connAuth:'Server asks for Google login — access is not set to Anyone. Fix: Apps Script ← Deploy ← Manage deployments ← ✏️ ← Who has access: Anyone ← Deploy. If Anyone is missing (company policy), deploy from a personal Gmail and send the new link',connFail:'Unexpected server reply — check the link or redeploy',ocrAuto:'📅 Date captured with the barcode ✓',scanDate:'Scan date',willSave:'Will record',sar:'SAR',totalVal:'Total value',setLink:'Set up link now',updPrice:'prices updated',ocrLoad:'Loading date reader…',ocrStart:'Starting camera…',ocrScan:'Aim the frame at the date…',ocrFound:'Date found ✓',ocrExp:'Expiry',ocrProd:'Production',ocrOther:'Other date',ocrApply:'tap to apply',ocrSet:'Expiry date filled ✓',noTorch:'Torch not available on this device',ocrHint:'Put the date line inside the yellow frame — get close and hold steady, use the torch 🔦 for faint prints',updData:'Update data (items / barcodes / pack / stores)',pickFiles:'Choose Excel files',resetData:'Reset',updHint:'Upload the same approved Excel files (barcode file, pack file, stores file) — the app detects each file type automatically and updates its database on this device.',updOk:'Data updated ✓',updNF:'Files not recognized — make sure they match the approved formats',updConv:'pack data updated',updAt:'updated',heroSub:'In-store stock count — North Region',adminPanel:'Manager Panel',adminPanel2:'Manager Panel',settings:'Settings',settings2:'Settings',pickStore:'Pick a store to start counting',searchStore:'Search store / city / number...',prevCounts:'Previous counts on this device',prevCounts2:'Previous counts',tBrowse:'Browse',tScan:'Scan',tCart:'Counted',searchProd:'Search name / ZREP / barcode...',showDisc:'Show discontinued items',startScan:'Start camera',stopScan:'Stop camera',scanHint:'Point the camera at the barcode — item and unit are detected automatically, and if the date is printed next to the barcode it is captured too. Otherwise use the 📅 Scan date button inside the item screen',unit:'Unit',qty:'Quantity',loc:'Location',expiry:'Expiry date',save:'Save',save2:'Save settings',saveLine:'Save + new line',finishSend:'Finish & send',sendTitle:'Finish & send the count',sendSrv:'Send to manager (server)',dlExcel:'Download Excel',waShare:'Share WhatsApp summary',adminSub:'Counts received from the team',dlAll:'Download all in one Excel',admEmpty:'Tap ⟳ to fetch counts from server',lang:'اللغة / Language',gasHint:'(submissions endpoint)',pinLbl:'Manager PIN',hello:'Hello',drafts:'Unfinished counts — tap to resume',all:'All',items:'items',lines:'lines',counted:'Counted',disc:'Discontinued',noConv:'no pack data',sent:'Sent',draft:'Draft',resume:'Resume',view:'View',del:'Delete',srvOk:'✅ Sent to manager successfully',srvFail:'⚠️ Sending failed — check internet or server URL. You can download the Excel and share it',noGas:'Server URL not configured — ask the manager, or download Excel and share via WhatsApp',pinAsk:'Enter manager PIN',wrongPin:'Wrong PIN',saved:'Saved ✓',lineAdded:'Line added ✓',needQty:'Enter a quantity first',scanNF:'Unknown barcode: ',scanFound:'Found: ',exitWarn:'The count is auto-saved, you can come back anytime',emptyCart:'Nothing counted yet',confirmDel:'Delete this line?',confirmDelSes:'Delete this count permanently?',sendNote:'The count will be sent to the manager and stays saved on this device',camErr:'Camera failed — allow camera access and make sure the link is https',store:'store',total:'Total',more:'Show more ↓'}
 };
 let SET = JSON.parse(localStorage.getItem('msc_set')||'{}');
 SET = Object.assign({lang:'en',gas:'',pin:'1589'},SET);
@@ -604,13 +614,18 @@ function openEntry(pi,unitPre){
   openSheet('entrySheet');
   setTimeout(()=>document.getElementById('esQty').focus(),250);
 }
+const UNIT_COLORS={CS:'#001E62',SB:'#0047BB',PC:'#0E8A4D'};
 function renderUnitSeg(an){
   document.getElementById('esUnits').innerHTML=UNITS.map(u=>{
     const bc=esProd[u.k.toLowerCase()];
     const pr=unitPrice(esProd,u.k);
-    return `<button class="${esUnit===u.k?'on'+(an?' pop':''):''}" onclick="pickUnit('${u.k}')">${SET.lang==='ar'?u.ar:u.en}<small>${pr?fmtSAR(pr):u.k}${bc?' ✓':''}</small></button>`}).join('');
+    const on=esUnit===u.k;
+    return `<button class="${on?'on'+(an?' pop':''):''}" ${on?`style="background:${UNIT_COLORS[u.k]};border-color:${UNIT_COLORS[u.k]}"`:''} onclick="pickUnit('${u.k}')">${SET.lang==='ar'?u.ar:u.en}<small>${pr?fmtSAR(pr):u.k}${bc?' ✓':''}</small></button>`}).join('');
+  const qi=document.getElementById('esQty');
+  qi.style.borderColor=UNIT_COLORS[esUnit];qi.style.color=UNIT_COLORS[esUnit];
+  const eq=document.getElementById('esEquiv');eq.style.color=UNIT_COLORS[esUnit];eq.style.fontWeight='700';
 }
-function pickUnit(k){esUnit=k;if(navigator.vibrate)navigator.vibrate(20);renderUnitSeg(true);updateEquiv();updateLive(true)}
+function pickUnit(k){esUnit=k;if(navigator.vibrate)navigator.vibrate(35);renderUnitSeg(true);updateEquiv();updateLive(true)}
 function locQty(k){
   const ls=SES.lines.filter(l=>l.pi===esProd.i&&l.loc===k);
   if(!ls.length)return '';
@@ -719,6 +734,29 @@ async function stopScan(){
   const b=document.getElementById('scanBtn');if(b)b.innerHTML=`📷 ${t('startScan')}`;
 }
 function resumeScan(){scanPaused=false}
+let scanTorchOn=false,scanZoomLvl=1;
+function scanTrack(){
+  if(bdStream)return bdStream.getVideoTracks()[0];
+  const v=document.querySelector('#reader video');
+  return v&&v.srcObject?v.srcObject.getVideoTracks()[0]:null;
+}
+async function scanTorch(){
+  const tr=scanTrack();if(!tr){toast(t('startScan'));return}
+  try{scanTorchOn=!scanTorchOn;await tr.applyConstraints({advanced:[{torch:scanTorchOn}]});if(navigator.vibrate)navigator.vibrate(15)}
+  catch(e){toast(t('noTorch'))}
+}
+async function scanZoom(){
+  const tr=scanTrack();if(!tr){toast(t('startScan'));return}
+  try{
+    const cap=tr.getCapabilities?tr.getCapabilities():{};
+    if(!cap.zoom){toast(t('noZoom'));return}
+    scanZoomLvl=scanZoomLvl>=3?1:scanZoomLvl+1;
+    const z=Math.min(cap.zoom.max,Math.max(cap.zoom.min,scanZoomLvl));
+    await tr.applyConstraints({advanced:[{zoom:z}]});
+    document.getElementById('zoomBtn').textContent=scanZoomLvl+'x';
+    if(navigator.vibrate)navigator.vibrate(15);
+  }catch(e){toast(t('noZoom'))}
+}
 function captureFrame(){
   const v=bdVideo||document.querySelector('#reader video');
   if(!v||v.readyState<2)return null;
@@ -810,18 +848,37 @@ function sessionPayload(s){
   return {id:s.id,merch:s.merch,store:s.store,started:s.started,sent:Date.now(),
     lines:s.lines.map(l=>{const p=PRODUCTS[l.pi];const up=p?unitPrice(p,l.unit):0;return{zrep:l.zrep,code:l.code,name:p?p.en:'',nameAr:p?p.ar:'',cat:p?p.cat:'',brand:p?p.brand:'',qty:l.qty,unit:l.unit,qtyPC:p?toPC(p,l.qty,l.unit):'',price:up?Math.round(up*10000)/10000:'',value:p?lineValue(p,l.qty,l.unit)||'':'',loc:l.loc,exp:l.exp,ts:l.ts}})};
 }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function confirmOnServer(id){
+  try{
+    const r=await fetch(gasUrl()+'?action=list&key='+encodeURIComponent(SET.pin),{redirect:'follow'});
+    const j=await r.json();
+    return j.ok&&(j.rows||[]).some(x=>x.id===id);
+  }catch(e){return false}
+}
 async function sendToServer(){
   if(!gasUrl()){toast(t('noGas'));return}
   const btn=document.getElementById('sendSrvBtn');
   btn.innerHTML=`<span class="spin"></span>`;btn.disabled=true;
+  const payload=JSON.stringify({action:'submit',data:sessionPayload(SES)});
+  let ok=false;
   try{
-    const r=await fetch(gasUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'submit',data:sessionPayload(SES)})});
+    const r=await fetch(gasUrl(),{method:'POST',body:payload,redirect:'follow'});
     const j=await r.json();
-    if(!j.ok)throw 0;
+    ok=!!j.ok;
+  }catch(e){
+    /* CORS-blocked reading? fire blind then confirm by id */
+    try{
+      await fetch(gasUrl(),{method:'POST',mode:'no-cors',body:payload});
+      await sleep(2500);
+      ok=await confirmOnServer(SES.id);
+    }catch(e2){ok=false}
+  }
+  if(ok){
     SES.status='sent';SES.sentAt=Date.now();touchSes();
     document.getElementById('sendStatus').innerHTML=`<div class="card" style="background:var(--green-soft);box-shadow:none;color:var(--green);font-weight:700">${t('srvOk')}</div>`;
     toast(t('srvOk'));renderDrafts();
-  }catch(e){
+  }else{
     document.getElementById('sendStatus').innerHTML=`<div class="card" style="background:#FDE8EB;box-shadow:none;color:var(--red);font-size:13px">${t('srvFail')}<button class="btn btn-ghost" style="width:100%;margin-top:9px;padding:9px" onclick="openSettings();setTimeout(testConn,300)">📡 ${t('testConn')}</button></div>`;
   }
   btn.disabled=false;btn.innerHTML=`📤 ${t('sendSrv')}`;
@@ -921,6 +978,33 @@ function renderHistory(){
       <button class="btn btn-navy" style="flex:1;padding:9px" onclick='exportSessionExcel(SESSIONS.find(x=>x.id=="${s.id}"))'>Excel ⬇️</button>
       <button class="btn btn-danger" style="padding:9px 13px" onclick="delSession('${s.id}')">🗑</button>
     </div></div>`).join('');
+}
+async function exportAllLocal(){
+  const list=SESSIONS.filter(x=>x.lines.length);
+  if(!list.length){toast(t('emptyCart'));return}
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('All Stores');
+  const hr=ws.addRow(['Date','Status','Merchandiser','Region','Account','Store#','Store','City','ZREP','Material','Description','الوصف','Category','Brand','Location','Expiry','Qty','Unit','Qty (PC)','Unit Price','Value']);
+  hr.eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:NAVY}};c.alignment={horizontal:'center'};bordAll(c)});
+  let totV=0;
+  list.forEach(x=>{
+    x.lines.forEach(l=>{
+      const p=PRODUCTS[l.pi]||PRODUCTS.find(z=>z.code===l.code)||{};
+      const pcs=p.code?toPC(p,l.qty,l.unit):'';
+      const up=p.code?unitPrice(p,l.unit):0;
+      const lv=p.code?lineValue(p,l.qty,l.unit):0;totV+=lv||0;
+      const r=ws.addRow([new Date(x.sentAt||x.updated||x.started).toLocaleString('en-GB'),x.status==='sent'?'Sent':'Draft',x.merch,x.store.region,x.store.account,x.store.num,x.store.name,x.store.city,l.zrep||'',l.code||'',p.en||'',p.ar||'',p.cat||'',p.brand||'',l.loc,l.exp||'',l.qty,l.unit,pcs===''?'':Math.round(pcs*100)/100,up?Math.round(up*100)/100:'',lv||'']);
+      r.eachCell(c=>{bordAll(c);c.alignment={horizontal:'center'}});
+      r.getCell(11).alignment={horizontal:'left'};r.getCell(12).alignment={horizontal:'right'};
+      r.getCell(21).font={bold:true,color:{argb:'FF1B873F'}};
+    });
+  });
+  if(totV){const tr=ws.addRow(['','','','','','','','','','','','','','','','','','','','TOTAL',Math.round(totV*100)/100]);
+    tr.eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:NAVY}};c.alignment={horizontal:'center'}})}
+  [16,8,12,9,10,8,30,12,11,9,38,30,12,12,10,9,7,6,9,9,10].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  ws.autoFilter='A1:U1';
+  const buf=await wb.xlsx.writeBuffer();
+  dlBlob(buf,`StockCount_AllStores_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 function delSession(id){if(!confirm(t('confirmDelSes')))return;SESSIONS=SESSIONS.filter(s=>s.id!==id);saveAll();renderHistory();renderDrafts()}
 
@@ -1233,14 +1317,14 @@ async function testConn(){
     const r=await fetch(url,{signal:ctl.signal});
     const txt=await r.text();
     let j=null;try{j=JSON.parse(txt)}catch(e){}
-    if(j&&j.ok){el.innerHTML=`<div class="card" style="background:var(--green-soft);color:var(--green);box-shadow:none;font-weight:700">${t('connOk')}</div>`}
+    if(j&&j.ok){el.innerHTML=`<div class="card" style="background:var(--green-soft);color:var(--green);box-shadow:none;font-weight:700">${t('connOk')}<div class="muted ltr" style="margin-top:5px;font-size:10.5px;word-break:break-all">${url.slice(0,70)}…</div></div>`}
     else if(/accounts\.google|ServiceLogin|<html/i.test(txt)){el.innerHTML=`<div class="card" style="background:#FDE8EB;color:var(--red);box-shadow:none;font-size:13px">${t('connAuth')}</div>`}
     else{el.innerHTML=`<div class="card" style="background:#FDE8EB;color:var(--red);box-shadow:none;font-size:13px">${t('connFail')}</div>`}
   }catch(e){el.innerHTML=`<div class="card" style="background:#FDE8EB;color:var(--red);box-shadow:none;font-size:13px">${t('connAuth')}</div>`}
 }
 function openSettings(){
   document.getElementById('setGas').value=SET.gas;
-  document.getElementById('setGas').placeholder=DEFAULT_GAS||'https://script.google.com/macros/s/.../exec';
+  document.getElementById('setGas').placeholder=DEFAULT_GAS?('✓ '+t('gasBuiltIn')):'https://script.google.com/macros/s/.../exec';
   document.getElementById('setPin').value=SET.pin;
   document.getElementById('dataStats').textContent=`${PRODUCTS.length} ${t('items')} · ${STORES.length} ${t('store')}${OVR?` · ${t('updAt')} ${fmtD(OVR.ts)}`:''}`;
   document.getElementById('resetDataBtn').style.display=OVR?'':'none';
