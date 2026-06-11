@@ -916,6 +916,9 @@ function shareWhatsApp(){
 
 /* ================= EXCEL ================= */
 const NAVY='FF00104B', YELL='FFFFD100', GRAYL='FFF2F4FA';
+const xlMY=v=>{if(!v)return '';const a=String(v).split('-');return new Date(Date.UTC(+a[0],+a[1]-1,1))};
+const xlFull=v=>{if(!v)return '';const a=String(v).split('-');return new Date(Date.UTC(+a[0],+a[1]-1,+a[2]))};
+const FMT_MY='mmm-yy', FMT_FULL='dd-mmm-yy';
 function bordAll(c){c.border={top:{style:'thin',color:{argb:'FFD6DCEA'}},bottom:{style:'thin',color:{argb:'FFD6DCEA'}},left:{style:'thin',color:{argb:'FFD6DCEA'}},right:{style:'thin',color:{argb:'FFD6DCEA'}}}}
 function addCountSheet(wb,ses,sheetName){
   const ws=wb.addWorksheet(sheetName.slice(0,31),{views:[{rightToLeft:false}]});
@@ -937,8 +940,9 @@ function addCountSheet(wb,ses,sheetName){
     const pcs=p.code?toPC(p,l.qty,l.unit):'';
     const up=p.code?unitPrice(p,l.unit):0;
     const lv=p.code?lineValue(p,l.qty,l.unit):0;
-    const r=ws.addRow([ix+1,l.zrep||'',l.code||'',p.en||l.name||'',p.ar||'',p.cat||'',p.brand||'',l.loc,l.exp||'',l.expFull||'',l.qty,l.unit,pcs===''?'':Math.round(pcs*100)/100,up?Math.round(up*100)/100:'',lv||'',p.cs||'']);
+    const r=ws.addRow([ix+1,l.zrep||'',l.code||'',p.en||l.name||'',p.ar||'',p.cat||'',p.brand||'',l.loc,xlMY(l.exp),xlFull(l.expFull),l.qty,l.unit,pcs===''?'':Math.round(pcs*100)/100,up?Math.round(up*100)/100:'',lv||'',p.cs||'']);
     r.eachCell(c=>{bordAll(c);c.alignment={horizontal:'center',vertical:'middle',wrapText:false}});
+    r.getCell(9).numFmt=FMT_MY;r.getCell(10).numFmt=FMT_FULL;
     r.getCell(4).alignment={horizontal:'left'};r.getCell(5).alignment={horizontal:'right'};
     if(ix%2)r.eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:GRAYL}}});
     r.getCell(11).font={bold:true,color:{argb:'FF0047BB'}};
@@ -1015,8 +1019,9 @@ async function exportAllLocal(){
       const pcs=p.code?toPC(p,l.qty,l.unit):'';
       const up=p.code?unitPrice(p,l.unit):0;
       const lv=p.code?lineValue(p,l.qty,l.unit):0;totV+=lv||0;
-      const r=ws.addRow([new Date(x.sentAt||x.updated||x.started).toLocaleString('en-GB'),x.status==='sent'?'Sent':'Draft',x.merch,x.store.region,x.store.account,x.store.num,x.store.name,x.store.city,l.zrep||'',l.code||'',p.en||'',p.ar||'',p.cat||'',p.brand||'',l.loc,l.exp||'',l.expFull||'',l.qty,l.unit,pcs===''?'':Math.round(pcs*100)/100,up?Math.round(up*100)/100:'',lv||'']);
+      const r=ws.addRow([new Date(x.sentAt||x.updated||x.started).toLocaleString('en-GB'),x.status==='sent'?'Sent':'Draft',x.merch,x.store.region,x.store.account,x.store.num,x.store.name,x.store.city,l.zrep||'',l.code||'',p.en||'',p.ar||'',p.cat||'',p.brand||'',l.loc,xlMY(l.exp),xlFull(l.expFull),l.qty,l.unit,pcs===''?'':Math.round(pcs*100)/100,up?Math.round(up*100)/100:'',lv||'']);
       r.eachCell(c=>{bordAll(c);c.alignment={horizontal:'center'}});
+      r.getCell(16).numFmt=FMT_MY;r.getCell(17).numFmt=FMT_FULL;
       r.getCell(11).alignment={horizontal:'left'};r.getCell(12).alignment={horizontal:'right'};
       r.getCell(22).font={bold:true,color:{argb:'FF1B873F'}};
     });
@@ -1087,8 +1092,9 @@ async function downloadAllAdmin(){
     list.forEach(x=>{const d=x.data;
       d.lines.forEach(l=>{
         totV+=parseFloat(l.value)||0;
-        const r=ws.addRow([new Date(d.sent).toLocaleString('en-GB'),d.merch,d.store.region,d.store.account,d.store.num,d.store.name,d.store.city,l.zrep||'',l.code||'',l.name||'',l.cat||'',l.brand||'',l.loc,l.exp||'',l.expFull||'',l.qty,l.unit,l.qtyPC===''?'':l.qtyPC,l.price||'',l.value||'']);
+        const r=ws.addRow([new Date(d.sent).toLocaleString('en-GB'),d.merch,d.store.region,d.store.account,d.store.num,d.store.name,d.store.city,l.zrep||'',l.code||'',l.name||'',l.cat||'',l.brand||'',l.loc,xlMY(l.exp),xlFull(l.expFull),l.qty,l.unit,l.qtyPC===''?'':l.qtyPC,l.price||'',l.value||'']);
         r.eachCell(c=>{bordAll(c);c.alignment={horizontal:'center'}});r.getCell(10).alignment={horizontal:'left'};
+        r.getCell(14).numFmt=FMT_MY;r.getCell(15).numFmt=FMT_FULL;
         r.getCell(20).font={bold:true,color:{argb:'FF1B873F'}};
       })});
     if(totV){const tr=ws.addRow(['','','','','','','','','','','','','','','','','','','TOTAL',Math.round(totV*100)/100]);
