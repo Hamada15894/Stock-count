@@ -170,7 +170,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <button class="btn btn-ghost" style="flex:1" onclick="openSettings()">⚙️ <span data-i="settings">الإعدادات</span></button>
       <button class="btn btn-navy" style="flex:.8" onclick="setLang(SET.lang==='ar'?'en':'ar')">🌐 <span id="langQuick"></span></button>
     </div>
-    <p class="muted" style="text-align:center;margin-top:22px">Mars Saudi Arabia — North Region · <b id="vTag">v2.2</b></p>
+    <p class="muted" style="text-align:center;margin-top:22px">Mars Saudi Arabia — North Region · <b id="vTag">v2.3</b></p>
   </div>
 </div>
 
@@ -710,11 +710,27 @@ async function startBD(fmts){
   getOcrWorker().catch(()=>{});
   bdLoop();
 }
+let bdTick=0;
+function enhancedBarcodeCanvas(){
+  const v=bdVideo;if(!v||v.readyState<2)return null;
+  const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return null;
+  const scale=Math.min(1,1280/vw);
+  const c=document.createElement('canvas');c.width=Math.round(vw*scale);c.height=Math.round(vh*scale);
+  const g=c.getContext('2d');g.drawImage(v,0,0,c.width,c.height);
+  const im=g.getImageData(0,0,c.width,c.height);
+  if(!pctStretch(im))return null;
+  g.putImageData(im,0,0);
+  return c;
+}
 async function bdLoop(){
   while(scanning&&bdDet){
     if(!scanPaused&&bdVideo&&bdVideo.readyState>=2){
       try{
-        const codes=await bdDet.detect(bdVideo);
+        /* alternate raw frame / contrast-boosted frame — boosts glossy & faint codes */
+        let target=bdVideo;
+        if(bdTick%3===2){const cv=enhancedBarcodeCanvas();if(cv)target=cv}
+        bdTick++;
+        const codes=await bdDet.detect(target);
         if(codes&&codes.length)onScan(codes[0].rawValue);
       }catch(e){}
     }
@@ -1231,35 +1247,71 @@ async function toggleTorch(){
     document.getElementById('torchBtn').style.background=ocrTorch?'#FFD100':'rgba(0,0,0,.55)';
   }catch(e){toast(t('noTorch'))}
 }
-/* shared pixel ops --------------------------------------------------- */
-function grayStretch(im){
-  const d=im.data;let min=255,max=0;
-  for(let i=0;i<d.length;i+=4){const y=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=y;if(y<min)min=y;if(y>max)max=y}
-  const rng=Math.max(1,max-min);
-  if(rng<25)return false; /* blank/flat frame */
-  for(let i=0;i<d.length;i+=4){const y=((d[i]-min)*255/rng)|0;d[i]=d[i+1]=d[i+2]=y}
+/* ============ vision layer (industrial preprocessing) ============ */
+function pctStretch(im){ /* percentile contrast stretch — immune to glare hotspots */
+  const d=im.data,hist=new Uint32Array(256);let n=0;
+  for(let i=0;i<d.length;i+=4){const y=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=y;hist[y]++;n++}
+  let acc=0,lo=0,hi=255;
+  const t2=n*0.02,t98=n*0.98;
+  for(let v=0;v<256;v++){acc+=hist[v];if(acc>=t2){lo=v;break}}
+  acc=0;
+  for(let v=0;v<256;v++){acc+=hist[v];if(acc>=t98){hi=v;break}}
+  if(hi-lo<6)return false; /* truly blank frame only — low contrast is what we FIX, not skip */
+  const rng=hi-lo;
+  for(let i=0;i<d.length;i+=4){let y=((d[i]-lo)*255/rng)|0;y=y<0?0:(y>255?255:y);d[i]=d[i+1]=d[i+2]=y}
   return true;
 }
-function boxBlur(im,wd,ht){ /* 3x3 blur to merge dot-matrix dots into solid strokes */
-  const d=im.data,src=new Uint8ClampedArray(wd*ht);
-  for(let i=0,j=0;i<d.length;i+=4,j++)src[j]=d[i];
-  for(let y=1;y<ht-1;y++)for(let x=1;x<wd-1;x++){
-    const o=y*wd+x;
-    const v=(src[o-wd-1]+src[o-wd]+src[o-wd+1]+src[o-1]+src[o]+src[o+1]+src[o+wd-1]+src[o+wd]+src[o+wd+1])/9|0;
-    const k=o*4;d[k]=d[k+1]=d[k+2]=v;
+function grayArr(im,wd,ht){const a=new Uint8ClampedArray(wd*ht);const d=im.data;for(let i=0,j=0;i<d.length;i+=4,j++)a[j]=d[i];return a}
+function blurArr(a,wd,ht,passes){ /* repeated 3x3 box blur → local illumination map */
+  let src=a;
+  for(let p=0;p<passes;p++){
+    const out=new Uint8ClampedArray(wd*ht);
+    for(let y=1;y<ht-1;y++)for(let x=1;x<wd-1;x++){
+      const o=y*wd+x;
+      out[o]=(src[o-wd-1]+src[o-wd]+src[o-wd+1]+src[o-1]+src[o]+src[o+1]+src[o+wd-1]+src[o+wd]+src[o+wd+1])/9|0;
+    }
+    src=out;
+  }
+  return src;
+}
+function adaptiveInk(im,wd,ht,passes,invert){
+  /* threshold each pixel against its LOCAL illumination — survives gloss & uneven light;
+     dark-ink path proven as-is; inverted path uses smoothed source + absolute margin
+     so dark wrappers don't dissolve into noise */
+  const g=grayArr(im,wd,ht);
+  const srcA=g; /* raw source both ways — absolute margin handles noise on invert */
+  const mean=blurArr(g,wd,ht,passes);
+  const ink=new Uint8ClampedArray(wd*ht);
+  for(let o=0;o<g.length;o++){
+    const m=mean[o];
+    ink[o]=invert?(srcA[o]>m+Math.max(16,m*0.16)?1:0):(g[o]<m*0.90?1:0);
+  }
+  const d=im.data;
+  for(let y=0;y<ht;y++)for(let x=0;x<wd;x++){
+    const o=y*wd+x;let on=ink[o];
+    if(!on&&y>0&&y<ht-1&&x>0&&x<wd-1){ /* dilation: merge dot-matrix dots */
+      on=ink[o-wd-1]||ink[o-wd]||ink[o-wd+1]||ink[o-1]||ink[o+1]||ink[o+wd-1]||ink[o+wd]||ink[o+wd+1];
+    }
+    const k=o*4,v=on?0:255;
+    d[k]=d[k+1]=d[k+2]=v;
   }
 }
-function binarize(im){ /* dark-on-light threshold at scaled mean */
-  const d=im.data;let sum=0,n=0;
-  for(let i=0;i<d.length;i+=4){sum+=d[i];n++}
-  const T=(sum/n)*0.92;
-  for(let i=0;i<d.length;i+=4){const v=d[i]<T?0:255;d[i]=d[i+1]=d[i+2]=v}
+function grayOnly(im){ /* grayscale without stretching (inverted path: stretch amplifies dark-bg noise) */
+  const d=im.data;let min=255,max=0;
+  for(let i=0;i<d.length;i+=4){const y=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=d[i+1]=d[i+2]=y;if(y<min)min=y;if(y>max)max=y}
+  return max-min>=6;
 }
-/* variant 0: contrast stretch · 1: dot-merge (blur+binarize) · 2: heavy dot-merge */
+/* variants: 0 percentile-stretch · 1 adaptive dot-merge · 2 wide adaptive · 3 INVERTED (light print on dark wrapper) */
 function preprocess(g,c,variant){
   const im=g.getImageData(0,0,c.width,c.height);
-  if(!grayStretch(im))return false;
-  if(variant>=1){boxBlur(im,c.width,c.height);if(variant>=2)boxBlur(im,c.width,c.height);binarize(im)}
+  if(variant===3){
+    if(!grayOnly(im))return false;
+    adaptiveInk(im,c.width,c.height,2,true);
+  }else{
+    if(!pctStretch(im))return false;
+    if(variant===1)adaptiveInk(im,c.width,c.height,2,false);
+    else if(variant===2)adaptiveInk(im,c.width,c.height,3,false);
+  }
   g.putImageData(im,0,0);
   return true;
 }
@@ -1390,7 +1442,7 @@ async function ocrLoop(){
   const w=await getOcrWorker();
   document.getElementById('ocrStatus').textContent=t('ocrScan');
   while(ocrRunning){
-    const variant=ocrTickN%3;
+    const variant=ocrTickN%4;
     const c=grabROI(variant);
     if(c){
       try{
@@ -1408,7 +1460,7 @@ async function ocrLoop(){
           if(navigator.vibrate)navigator.vibrate(35);
           document.getElementById('ocrStatus').textContent=(exp&&(exp.n||1)>=2&&vDiv(exp)>=2)?t('ocrFound'):t('ocrConfirming');
         }
-        document.getElementById('ocrTick').textContent='·'.repeat((ocrTickN%3)+1);
+        document.getElementById('ocrTick').textContent='·'.repeat((ocrTickN%4)+1);
       }catch(e){}
     }
     ocrTickN++;
